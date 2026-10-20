@@ -13,13 +13,13 @@ namespace Ecommerce.Controllers
         {
             _orderService = orderService;
         }
-        [HttpGet("get-orders")]
+        [HttpGet("get")]
         public async Task<IActionResult> GetOrders()
         {
             var orders = await _orderService.GetOrders();
             return Ok(orders);
         }
-        [HttpDelete("clear-orders")]
+        [HttpDelete("clear")]
         public async Task<IActionResult> ClearOrders()
         {
             await _orderService.ClearOrders();

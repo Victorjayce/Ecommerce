@@ -15,13 +15,13 @@ namespace Ecommerce.Controllers
             _productService = productService;
         }
 
-        [HttpGet("get-products")]
+        [HttpGet("get")]
         public async Task<ActionResult<List<Product>>> GetProducts(int fetched)
         {
             var products = await _productService.GetProducts(fetched);
             return Ok(products);
         }
-        [HttpPost("add-products")]
+        [HttpPost("add")]
         public async Task<ActionResult<Product>> AddProducts(Product product)
         {
             var newProduct = await _productService.AddProducts(product);

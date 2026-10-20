@@ -14,13 +14,13 @@ namespace Ecommerce.Controllers
         {
             _cartService = cartService;
         }
-        [HttpGet("get-cart-items")]
+        [HttpGet("get")]
         public async Task<ActionResult<List<CartItemDto>>> GetCartItems()
         {
             var cartItems = await _cartService.GetCartItems();
             return Ok(cartItems);
         }
-        [HttpPost("add-to-cart")]
+        [HttpPost("add")]
         public async Task<ActionResult<CartItemDto?>> AddToCart(AddToCartDto addToCartDto)
         {
             var cartItem = await _cartService.AddToCart(addToCartDto.ProductId, addToCartDto.Quantity);
@@ -30,7 +30,7 @@ namespace Ecommerce.Controllers
             }
             return Ok(cartItem);
         }
-        [HttpPut("update-cart-item")]
+        [HttpPut("update")]
         public async Task<ActionResult<CartItemDto?>> UpdateCartItem(AddToCartDto updateCartItemDto)
         {
             var cartItem = await _cartService.UpdateCartItem(updateCartItemDto.ProductId, updateCartItemDto.Quantity);
@@ -40,7 +40,7 @@ namespace Ecommerce.Controllers
             }
             return Ok(cartItem);
         }
-        [HttpDelete("remove-from-cart/{productId}")]
+        [HttpDelete("remove/{productId}")]
         public async Task<ActionResult<bool>> RemoveFromCart(int productId)
         {
             var result = await _cartService.RemoveFromCart(productId);
@@ -50,7 +50,7 @@ namespace Ecommerce.Controllers
             }
             return Ok(result);
         }
-        [HttpDelete("clear-cart")]
+        [HttpDelete("clear")]
         public async Task<ActionResult<bool>> ClearCart()
         {
             var result = await _cartService.ClearCart();
