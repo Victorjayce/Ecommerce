@@ -6,6 +6,18 @@ This document describes the completed HTTP API exposed by the ASP.NET Core .NET 
 
 The API uses HTTPS redirection and runs with these Visual Studio launch profiles:
 
+### Database setup and test data
+
+After cloning the repository, create or migrate the `EcommerceDB` database using Entity Framework:
+
+```bash
+dotnet ef database update
+```
+
+Then run the root-level [`seed_products.sql`](seed_products.sql) script against the `EcommerceDB` database using SQL Server Management Studio, Azure Data Studio, or another SQL Server client. The script inserts 250 sample products, including products with zero stock so out-of-stock behavior can be tested.
+
+Run the seed script only after the database and `ProductsTable` have been created. If the script is executed more than once, it will insert another set of products unless the table is cleared first.
+
 | Profile | Base URL |
 |---|---|
 | HTTP | `http://localhost:5156` |

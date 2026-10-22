@@ -50,7 +50,15 @@ An ASP.NET Core Web API for a basic ecommerce application. The project provides 
    dotnet ef database update
    ```
 
-4. Run the API:
+4. Seed the database with test products by opening `seed_products.sql` in SQL Server Management Studio or Azure Data Studio and executing it against `EcommerceDB`:
+
+   ```sql
+   -- seed_products.sql
+   ```
+
+   The script inserts 250 sample products, including some out-of-stock products for testing. Run it after the database has been created and migrations have completed.
+
+5. Run the API:
 
    ```bash
    dotnet run
@@ -61,7 +69,7 @@ An ASP.NET Core Web API for a basic ecommerce application. The project provides 
    - HTTP: `http://localhost:5156`
    - HTTPS: `https://localhost:7136`
 
-5. Open Swagger in a browser:
+6. Open Swagger in a browser:
 
    ```text
    http://localhost:5156/swagger
