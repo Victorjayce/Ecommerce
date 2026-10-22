@@ -1,8 +1,6 @@
 # Ecommerce API Integration Guide
 
-This document describes the current HTTP API exposed by the ASP.NET Core .NET 8 backend for the Flutter application.
-
-> **Source of truth:** This guide reflects the code currently implemented in the `Ecommerce` project. Order placement is not implemented yet. Do not build the Flutter checkout flow as if an order-creation endpoint already exists.
+This document describes the completed HTTP API exposed by the ASP.NET Core .NET 8 backend for the Flutter application. It is based on the controllers, DTOs, services, and models currently implemented in the `Ecommerce` project.
 
 ## 1. Development connection
 
@@ -39,9 +37,9 @@ The backend currently has no authentication and no CORS configuration. There is 
 - IDs and quantities are integers.
 - Prices, totals, and unit prices are decimal numbers with two database decimal places. Treat them as numeric values in Dart; avoid binary floating-point arithmetic for money when calculating totals locally.
 - Successful responses use `200 OK`.
-- Invalid or missing products/cart items generally use `400 Bad Request`.
-- There is no centralized error envelope or documented exception handler. Unexpected server/database errors may return the framework's default error response, especially outside Development.
-- The controllers do not explicitly validate positive quantities or all required product fields. The Flutter client should validate input before sending it.
+- Missing products or cart items generally use `400 Bad Request`; missing orders use `404 Not Found`.
+- There is no centralized error envelope or documented exception handler. Unexpected server/database errors may return the framework's default error response.
+- The Flutter client should validate required fields, positive quantities, stock, and maximum field lengths before sending requests.
 
 ## 3. Data models
 
@@ -85,11 +83,11 @@ Used by both adding and updating a cart item.
 | Field | JSON type | Description |
 |---|---|---|
 | `productId` | `int` | Existing product ID. |
-| `quantity` | `int` | Quantity requested. Add should normally be positive. Update values less than or equal to zero remove the item internally, although that response currently becomes `200` with a null body. |
+| `quantity` | `int` | Quantity requested. Add requires a positive value. Update values less than or equal to zero remove the item and returns `200 OK` with a null body. |
 
 ### CartItem
 
-The intended cart item response shape is:
+The cart item response shape is:
 
 ```json
 {
@@ -113,25 +111,23 @@ The intended cart item response shape is:
 | `total` | `number` | `unitPrice * quantity`. |
 | `imageUrl` | `string` | Current product image URL. |
 
-**Current implementation note:** `GET /api/Cart/get` maps only `productId`, `quantity`, `name`, and `unitPrice`; `id`, `total`, and `imageUrl` may be absent or have default values in that response. Add/update responses use the fuller shape. Flutter should safely treat these fields as nullable/defaulted until the backend mapping is made consistent.
+All cart endpoints map to the complete `CartItemDto` shape shown above.
 
 ### Order
 
-The current order-list response is an array of persisted `Order` entities, not `OrderDto` objects:
+Order endpoints return `OrderDto` objects:
 
 ```json
 {
   "id": 1,
   "status": 0,
   "total": 119.98,
-  "createdAt": "2026-10-20T12:30:00Z",
-  "fullName": "Alex Doe",
+	"fullName": "Alex Doe",
   "phone": "+15551234567",
   "deliveryAddress": "10 Main Street",
   "items": [
 	{
 	  "id": 1,
-	  "orderId": 1,
 	  "productId": 1,
 	  "productName": "Wireless Headphones",
 	  "unitPrice": 59.99,
@@ -148,26 +144,24 @@ Order fields:
 | `id` | `int` | Server-generated order ID. |
 | `status` | `int` currently | Enum value: `0` Pending, `1` Paid, `2` Shipped, `3` Delivered, `4` Cancelled. The backend has not configured string enum serialization. |
 | `total` | `number` | Persisted order total. |
-| `createdAt` | ISO-8601 datetime string | Created timestamp, stored in UTC by default. |
 | `fullName` | `string` | Delivery recipient; maximum 200 characters. |
+| `address` | `string` | Delivery address; maximum 500 characters. |
 | `phone` | `string` | Delivery phone; maximum 30 characters. |
-| `deliveryAddress` | `string` | Delivery address; maximum 500 characters. |
 | `items` | `array` | Order line items. |
 
 Order item fields:
 
 - `id`: integer line-item ID.
-- `orderId`: integer parent order ID.
 - `productId`: integer product ID.
 - `productName`: product name copied at checkout.
 - `unitPrice`: price copied at checkout.
 - `quantity`: purchased quantity.
 
-The `OrderDto` type also exists in the backend, but no current controller returns it. Its `quantity` field is an aggregate quantity and its `items` field contains `OrderItem` objects.
+The `quantity` field on `OrderDto` is the aggregate quantity across all order items. `items` contains the product snapshot captured at checkout.
 
-### PlaceOrderRequest (reserved for future checkout)
+### PlaceOrderRequest
 
-The backend defines this request model, but there is currently no HTTP endpoint accepting it:
+Used by the order creation endpoint:
 
 ```json
 {
@@ -177,7 +171,7 @@ The backend defines this request model, but there is currently no HTTP endpoint 
 }
 ```
 
-Fields are required by the order entity and have maximum lengths of 200, 30, and 500 characters respectively. Do not call an order-placement route until the backend exposes and implements one.
+Fields are required and have maximum lengths of 200, 30, and 500 characters respectively.
 
 ## 4. Endpoints
 
@@ -260,7 +254,7 @@ Request body: `AddToCartRequest`.
 ```
 
 - If the product does not exist, the controller returns `400 Bad Request` with an empty body.
-- If the product exists, the requested quantity is added to any existing quantity.
+- If the product exists, the requested quantity is stored for the cart item. An existing cart item's quantity is replaced rather than incremented.
 - Success: `200 OK` with a `CartItem` response.
 
 #### Set cart quantity
@@ -308,7 +302,39 @@ Success: `200 OK` with the text response `Cart cleared successfully`.
 GET /api/Order/get
 ```
 
-Response: `200 OK` with `Order[]`, including each order's `items` collection.
+Response: `200 OK` with `OrderDto[]`, including each order's item snapshots.
+
+#### Get an order
+
+```http
+GET /api/Order/get/{orderId}
+```
+
+- Success: `200 OK` with an `OrderDto`.
+- Missing order: `404 Not Found` with `Order not found`.
+
+#### Create an order
+
+```http
+POST /api/Order/create
+Content-Type: application/json
+```
+
+Request body: `PlaceOrderRequest`.
+
+```json
+{
+  "fullName": "Alex Doe",
+  "phone": "+15551234567",
+  "deliveryAddress": "10 Main Street"
+}
+```
+
+- The cart must contain at least one item.
+- The service validates that each cart quantity is within available stock.
+- The order stores product names and prices as snapshots, calculates the total, reduces product stock, and clears the cart.
+- Success: `200 OK` with the created `OrderDto`.
+- Invalid customer data, an empty cart, or insufficient stock: `400 Bad Request` with `Failed to create order`.
 
 #### Clear all orders
 
@@ -320,9 +346,15 @@ Success: `200 OK` with an empty body.
 
 This deletes every order and should be treated as an administrative/destructive operation. It is currently unprotected and should not be called by the customer-facing Flutter app.
 
-#### Place an order
+#### Cancel an order
 
-**Not currently available.** There is no `POST` order endpoint in `OrderController`. `PlaceOrderDto` and service methods exist as a blueprint/stub only; the service currently returns `null` for order creation and update.
+```http
+DELETE /api/Order/cancel/{orderId}
+```
+
+- Orders that are cancelled or delivered cannot be cancelled.
+- A successful cancellation restores the order item quantities to product stock and returns `200 OK` with `Order cancelled successfully`.
+- Missing, already cancelled, or delivered orders return `404 Not Found` with `Order not found or already shipped`.
 
 ## 5. Recommended Flutter structure
 
@@ -330,7 +362,7 @@ Create separate API clients or repositories so transport details stay out of wid
 
 - `ProductApi`: `getProducts(offset)` and, only for administrative screens, `addProduct(product)`.
 - `CartApi`: `getCart()`, `addToCart(productId, quantity)`, `updateCart(productId, quantity)`, `removeFromCart(productId)`, and `clearCart()`.
-- `OrderApi`: `getOrders()` and, only for administrative tooling, `clearOrders()`. Keep `placeOrder()` disabled until a backend route is implemented.
+- `OrderApi`: `getOrders()`, `getOrderById(orderId)`, `createOrder(request)`, and `cancelOrder(orderId)`.
 
 Suggested Dart model names:
 
@@ -338,27 +370,23 @@ Suggested Dart model names:
 - `CartItem.fromJson`
 - `Order.fromJson`
 - `OrderItem.fromJson`
-- `PlaceOrderRequest` reserved for the future checkout endpoint
+- `PlaceOrderRequest.fromJson` / `toJson`
 
 For resilient parsing:
 
-- Accept absent/null `id`, `total`, and `imageUrl` on cart-list results because of the current server mapping inconsistency.
-- Parse order `status` as an integer today, but isolate that conversion so it can later accept string values such as `Pending` if the backend enables enum-string serialization.
-- Parse `createdAt` with `DateTime.parse` and display it in the user's local timezone.
+- Parse order `status` as an integer: `0` Pending, `1` Paid, `2` Shipped, `3` Delivered, `4` Cancelled.
 - Check HTTP status codes before decoding a success model; error bodies are not a stable JSON schema.
 
-## 6. Backend limitations to resolve before production
+## 6. Current deployment considerations
 
-1. Add authentication and associate carts/orders with a user or session.
-2. Add CORS for the approved frontend origins.
-3. Implement `POST` order placement, including cart validation, stock checks, order-item snapshots, total calculation, and cart clearing.
-4. Add an order update/status policy instead of exposing destructive operations to customers.
-5. Add consistent validation and stable error responses, preferably `ProblemDetails`.
-6. Make cart-list mapping return the same complete `CartItemDto` shape as add/update.
-7. Fix cart lookup logic so existing items are consistently located by `ProductId`, not only by the cart row's database key.
-8. Decide whether enum values should be serialized as strings or remain numeric, then document and test that contract.
-9. Add pagination ordering to product listing and validate the `fetched` offset.
-10. Enforce stock and positive quantities on the server; client-side validation alone is not sufficient.
+The core product, cart, checkout, order lookup, and order cancellation flows are implemented. The following infrastructure concerns still apply before a public production deployment:
+
+1. Add authentication and associate carts and orders with a user or session.
+2. Add CORS for approved frontend origins.
+3. Add consistent validation and stable `ProblemDetails` error responses.
+4. Protect administrative/destructive operations and define an order status policy.
+5. Add pagination ordering and validate the product-list offset.
+6. Add automated integration tests for stock, checkout, cancellation, and concurrent cart updates.
 
 ## 7. Quick request sequence for the Flutter developer
 
@@ -366,5 +394,5 @@ For resilient parsing:
 2. `POST /api/Cart/add` with `productId` and `quantity` when the customer adds a product.
 3. `GET /api/Cart/get` when opening the cart screen.
 4. `PUT /api/Cart/update` when changing a quantity, or `DELETE /api/Cart/remove/{productId}` to remove it.
-5. Keep checkout UI behind a feature flag or disabled state until the backend exposes order placement.
-6. `GET /api/Order/get` can currently be used only for the existing order-list behavior; it is not a customer-scoped order history endpoint yet.
+5. `POST /api/Order/create` with customer delivery details to complete checkout.
+6. Use `GET /api/Order/get/{orderId}` for a specific order and `DELETE /api/Order/cancel/{orderId}` when cancellation is allowed.

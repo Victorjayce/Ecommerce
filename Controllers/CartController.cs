@@ -26,7 +26,7 @@ namespace Ecommerce.Controllers
             var cartItem = await _cartService.AddToCart(addToCartDto.ProductId, addToCartDto.Quantity);
             if (cartItem == null)
             {
-                return BadRequest();
+                return BadRequest("Item not found or insufficient stock");
             }
             return Ok(cartItem);
         }
@@ -36,7 +36,7 @@ namespace Ecommerce.Controllers
             var cartItem = await _cartService.UpdateCartItem(updateCartItemDto.ProductId, updateCartItemDto.Quantity);
             if (cartItem == null)
             {
-                return BadRequest();
+                return BadRequest("Item not found or insufficient stock");
             }
             return Ok(cartItem);
         }
