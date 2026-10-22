@@ -53,7 +53,7 @@ Used by product listing and product creation.
 | `name` | `string` | Required; maximum 200 characters. |
 | `description` | `string` | Maximum 1,000 characters. |
 | `price` | `number` | Product price. |
-| `stock` | `int` | Current stock value. The current cart service does not enforce it. |
+| `stock` | `int` | Current stock value. Add-to-cart and checkout validate stock; quantity updates do not currently perform a stock check. |
 | `imageUrl` | `string` | Image URL, or an empty string when not supplied. |
 
 Example:
@@ -119,15 +119,15 @@ Order endpoints return `OrderDto` objects:
 
 ```json
 {
-  "id": 1,
+	"id": 1,
   "status": 0,
   "total": 119.98,
-	"fullName": "Alex Doe",
+  "quantity": 2,
+  "fullName": "Alex Doe",
   "phone": "+15551234567",
-  "deliveryAddress": "10 Main Street",
-  "items": [
+  "address": "10 Main Street",
+	"items": [
 	{
-	  "id": 1,
 	  "productId": 1,
 	  "productName": "Wireless Headphones",
 	  "unitPrice": 59.99,
@@ -151,7 +151,6 @@ Order fields:
 
 Order item fields:
 
-- `id`: integer line-item ID.
 - `productId`: integer product ID.
 - `productName`: product name copied at checkout.
 - `unitPrice`: price copied at checkout.
@@ -235,7 +234,7 @@ The cart is currently global to the database/application. It is not associated w
 GET /api/Cart/get
 ```
 
-Response: `200 OK` with `CartItem[]`. See the response-shape note under [CartItem](#cartitem).
+Response: `200 OK` with `CartItemDto[]`. See the response shape under [CartItem](#cartitem).
 
 #### Add to cart
 
@@ -335,16 +334,6 @@ Request body: `PlaceOrderRequest`.
 - The order stores product names and prices as snapshots, calculates the total, reduces product stock, and clears the cart.
 - Success: `200 OK` with the created `OrderDto`.
 - Invalid customer data, an empty cart, or insufficient stock: `400 Bad Request` with `Failed to create order`.
-
-#### Clear all orders
-
-```http
-DELETE /api/Order/clear
-```
-
-Success: `200 OK` with an empty body.
-
-This deletes every order and should be treated as an administrative/destructive operation. It is currently unprotected and should not be called by the customer-facing Flutter app.
 
 #### Cancel an order
 
