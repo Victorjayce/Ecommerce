@@ -1,14 +1,17 @@
 ﻿using Ecommerce.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Data
 {
-    public class DataContext : DbContext
+    public class DataContext : IdentityDbContext<User>
     {
         public DataContext(DbContextOptions<DataContext> options) : base(options)
         {
         }
 
+        public DbSet<User> UsersTable { get; set; }
+        public DbSet<RefreshToken> RefreshTokensTable { get; set; }
         public DbSet<Product> ProductsTable {get; set;}
         public DbSet<CartItem> CartItemsTable { get; set; }
         public DbSet<Order> OrdersTable { get; set; }
@@ -16,6 +19,7 @@ namespace Ecommerce.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<CartItem>()
                 .HasIndex(c => c.ProductId)
                 .IsUnique();
