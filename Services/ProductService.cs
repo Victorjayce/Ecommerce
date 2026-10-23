@@ -23,5 +23,27 @@ namespace Ecommerce.Services
             _context.SaveChanges();
             return Task.FromResult(product);
         }
+        public async Task<Product?> UpdateProduct(Product product)
+        {
+            var existingProduct = _context.ProductsTable.FirstOrDefault(p => p.Id == product.Id);
+            if (existingProduct == null) return null;
+
+            existingProduct.Name = product.Name;
+            existingProduct.Description = product.Description;
+            existingProduct.Price = product.Price;
+            await _context.SaveChangesAsync();
+            return existingProduct;
+        }
+        public async Task<Product?> RemoveProduct(int productId)
+        {
+            var product = _context.ProductsTable.FirstOrDefault(p => p.Id == productId);
+            if (product == null) return null;
+
+            _context.ProductsTable.Remove(product);
+            await _context.SaveChangesAsync();
+            return product;
+        }
+
+        }
     }
 }

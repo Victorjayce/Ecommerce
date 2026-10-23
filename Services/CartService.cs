@@ -30,7 +30,19 @@ namespace Ecommerce.Services
             return Items;
 
         }
-        public async Task<CartItemDto?> AddToCart(int productId, int newQuantity)
+
+        public async Task<CartItemDto?> GetCartItem(string userId)
+        {
+            var cartItem = await _context.CartItemsTable.Include(c => c.Product).FirstOrDefaultAsync(c => c.UserId == userId);
+            if (cartItem == null)
+            {
+                return null;
+            }
+
+            return _mapToDto(cartItem);
+        }
+
+        public async Task<CartItemDto?> AddToCart(int productId, int newQuantity, string userId)
         {
             if (newQuantity < 1)
                 return null;
@@ -39,7 +51,7 @@ namespace Ecommerce.Services
             if (product == null || newQuantity > product.Stock)
                 return null;
 
-            var cartItem = await _context.CartItemsTable.FirstOrDefaultAsync(c => c.ProductId == productId);
+            var cartItem = await _context.CartItemsTable.FirstOrDefaultAsync(c => c.ProductId == productId && c.UserId == userId);
 
             if (cartItem == null)
             {
@@ -47,7 +59,8 @@ namespace Ecommerce.Services
                 {
                     ProductId = productId,
                     Product = product,    
-                    Quantity = newQuantity
+                    Quantity = newQuantity,
+                    UserId = userId
                 };
                 _context.CartItemsTable.Add(cartItem);
             }
@@ -59,9 +72,9 @@ namespace Ecommerce.Services
             await _context.SaveChangesAsync(); 
             return _mapToDto(cartItem);
         }
-        public async Task<CartItemDto?> UpdateCartItem(int productId, int newQuantity)
+        public async Task<CartItemDto?> UpdateCartItem(int productId, int newQuantity, string userId)
         {
-            var cartItem = await _context.CartItemsTable.Include(c => c.Product).FirstOrDefaultAsync(c => c.ProductId == productId);
+            var cartItem = await _context.CartItemsTable.Include(c => c.Product).FirstOrDefaultAsync(c => c.ProductId == productId && c.UserId == userId);
             if (cartItem == null)
             {
                 return null;
@@ -78,9 +91,9 @@ namespace Ecommerce.Services
             await _context.SaveChangesAsync();
             return _mapToDto(cartItem!);
         }
-        public async Task<bool> RemoveFromCart(int productId)
+        public async Task<bool> RemoveFromCart(int productId, string userId)
         {
-            var cartItem = await _context.CartItemsTable.FindAsync(productId);
+            var cartItem = await _context.CartItemsTable.FirstOrDefaultAsync(c => c.ProductId == productId && c.UserId == userId);
             if (cartItem == null)
             {
                 return false;
@@ -90,9 +103,10 @@ namespace Ecommerce.Services
             await _context.SaveChangesAsync();
             return true;
         }
-        public async Task<bool> ClearCart()
+        public async Task<bool> ClearCart(string userId)
+
         {
-            await _context.CartItemsTable.ExecuteDeleteAsync();
+            await _context.CartItemsTable.Where(c => c.UserId == userId).ExecuteDeleteAsync();
             await _context.SaveChangesAsync();
             return true;
         }

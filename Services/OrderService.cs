@@ -23,25 +23,24 @@ namespace Ecommerce.Services
             
             return orders.Select(OrderToDto).ToList();
         }
-        public async Task<OrderDto?> GetOrderById(int orderId)
+        public async Task<OrderDto?> GetOrder(string userId)
         {
             var order = await _context.OrdersTable
                 .Include(o => o.Items)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(o => o.Id == orderId);
+                .FirstOrDefaultAsync(o => o.UserId == userId);
             if(order == null) return null;
 
             return OrderToDto(order);
         }
-        public async Task<bool> CancelOrder(int orderId)
+        public async Task<bool> CancelOrder(int orderId, string userId)
         {
             var order = await _context.OrdersTable
                                 .Include(o => o.Items)
-                                .FirstOrDefaultAsync(o => o.Id == orderId);
+                                .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId);
             if (order == null) return false;
             if(order.Status == OrderStatus.Cancelled ||  order.Status == OrderStatus.Delivered) return false;
 
-            // load all the affected products in one query
             var productIds = order.Items.Select(i => i.ProductId).ToList();
             var products = await _context.ProductsTable
                 .Where(p => productIds.Contains(p.Id))
@@ -55,14 +54,14 @@ namespace Ecommerce.Services
             await _context.SaveChangesAsync();
             return true;
         }
-        public async Task<OrderDto?> CreateOrder(PlaceOrderDto request)
+        public async Task<OrderDto?> CreateOrder(PlaceOrderDto request, string userId)
         {
             if (string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.Phone) ||
                 string.IsNullOrWhiteSpace(request.DeliveryAddress))
                 return null;
 
-            var cartItems = await _context.CartItemsTable
+            var cartItems = await _context.CartItemsTable.Where(c => c.UserId == userId)
                                 .Include(c => c.Product)
                                 .ToListAsync();
 
@@ -82,25 +81,30 @@ namespace Ecommerce.Services
                 FullName = request.FullName,
                 Phone = request.Phone,
                 DeliveryAddress = request.DeliveryAddress,
-                Items = cartItems.Select(CartToOrder).ToList()
+                Items = cartItems.Select(CartToOrder).ToList(),
+                UserId = userId
             };
             order.Total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
 
             foreach (var ci in cartItems)
-                ci.Product.Stock -= ci.Quantity;        // reduce stock
+                ci.Product.Stock -= ci.Quantity; 
 
             _context.OrdersTable.Add(order);
-            _context.CartItemsTable.RemoveRange(cartItems);  // empty the cart
+            _context.CartItemsTable.RemoveRange(cartItems);
 
             await _context.SaveChangesAsync();
 
             return OrderToDto(order);
         }
-        public async Task<OrderDto?> UpdateOrder(Order order)
+        public async Task<OrderDto?> UpdateOrder(Order order, string userId)
         {
-            _context.OrdersTable.Update(order);
+            var Findorder = await _context.OrdersTable
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == order.Id && o.UserId == userId);
+            if(Findorder == null) return null;
+            Findorder.Status = order.Status;
             await _context.SaveChangesAsync();
-            return OrderToDto(order);
+            return OrderToDto(Findorder);
         }
         public OrderItem CartToOrder(CartItem cartItem)
         {

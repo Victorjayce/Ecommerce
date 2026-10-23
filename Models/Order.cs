@@ -23,6 +23,10 @@ namespace Ecommerce.Models
         [Required, MaxLength(500)]
         public string DeliveryAddress { get; set; } = string.Empty;
 
+        public string UserId { get; set; }
+        [ForeignKey(nameof(UserId))]
+        public User User { get; set; } = null!;
+
         public List<OrderItem> Items { get; set; } = new();
     }
 }

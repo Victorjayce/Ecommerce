@@ -6,10 +6,10 @@ namespace Ecommerce.Interface
     public interface IOrder
     {
         public Task<List<OrderDto>> GetOrders();
-        public Task<OrderDto?> GetOrderById(int orderId);
-        public Task<bool> CancelOrder(int orderId);
-        public Task<OrderDto?> CreateOrder(PlaceOrderDto placeOrderDto);
-        public Task<OrderDto?> UpdateOrder(Order order);
+        public Task<OrderDto?> GetOrder(string userId);
+        public Task<bool> CancelOrder(int orderId, string userId);
+        public Task<OrderDto?> CreateOrder(PlaceOrderDto placeOrderDto, string userId);
+        public Task<OrderDto?> UpdateOrder(Order order, string userId);
         public OrderItem CartToOrder(CartItem cartItem);
         public OrderDto OrderToDto(Order order);
     }

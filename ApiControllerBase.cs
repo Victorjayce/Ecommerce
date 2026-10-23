@@ -1,9 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Ecommerce
 {
     public abstract class ApiControllerBase : ControllerBase
     {
+        protected string UserId =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? throw new UnauthorizedAccessException("No user id in token");
         protected IActionResult ToActionResult<T>(ServiceResult<T> result)
         {
             if (result.Success) return Ok(result.Data);
