@@ -33,20 +33,20 @@ namespace Ecommerce.Controllers
             _authService = authService;
         }
 
-        [HttpPost("customer/signup")]
+        [HttpPost("user/signup")]
         public async Task<IActionResult> Register([FromBody] RegisterDto payload)
         {
             return ToActionResult(await _authService.SignUp(payload));
         }
 
-        [HttpPost("customer/login")]
+        [HttpPost("user/login")]
         public async Task<IActionResult> Login([FromBody] LoginDto payload)
         {
             if (!ModelState.IsValid) return BadRequest("provide all required details");
             return ToActionResult(await _authService.Login(payload));
         }
 
-        [HttpPost("customer/refresh-token")]
+        [HttpPost("user/refresh-token")]
         public async Task<IActionResult> TokenRefresh([FromBody] TokenRequestDto payload)
         {
             if (!ModelState.IsValid) return BadRequest("provide all required details");
