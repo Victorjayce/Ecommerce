@@ -16,6 +16,7 @@ namespace Ecommerce.Data
         public DbSet<CartItem> CartItemsTable { get; set; }
         public DbSet<Order> OrdersTable { get; set; }
         public DbSet<OrderItem> OrderItemsTable { get; set; }
+        public DbSet<Payment> PaymentsTable { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,6 +28,14 @@ namespace Ecommerce.Data
             modelBuilder.Entity<Order>()
                 .Property(o => o.Status)
                 .HasConversion<string>();
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => p.Reference)
+                .IsUnique();
 
             modelBuilder.Entity<CartItem>()
                 .HasOne(c => c.Product)

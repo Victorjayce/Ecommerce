@@ -27,6 +27,8 @@ namespace Ecommerce.Models
         [ForeignKey(nameof(UserId))]
         public User User { get; set; } = null!;
 
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
+
         public List<OrderItem> Items { get; set; } = new();
     }
 }

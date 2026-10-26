@@ -75,6 +75,11 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddSingleton(tokenValidationParameters);
 
+builder.Services.AddHttpClient<PaymentService>();
+builder.Services.AddScoped<IPayment, PaymentService>();
+builder.Services.AddScoped<IPayment>(
+    sp => sp.GetRequiredService<PaymentService>());
+
 builder.Services.AddScoped<IProduct, ProductService>();
 builder.Services.AddScoped<ICart, CartService>();
 builder.Services.AddScoped<IOrder, OrderService>();
