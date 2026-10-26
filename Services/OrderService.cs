@@ -14,32 +14,32 @@ namespace Ecommerce.Services
         {
             _context = context;
         }
-        public async Task<List<OrderDto>> GetOrders()
+        public async Task<ServiceResult<List<OrderDto>>> GetOrders()
         {
             var orders = await _context.OrdersTable
                 .Include(o => o.Items)
                 .AsNoTracking()
                 .ToListAsync();
             
-            return orders.Select(OrderToDto).ToList();
+            return ServiceResult<List<OrderDto>>.Ok(orders.Select(OrderToDto).ToList());
         }
-        public async Task<OrderDto?> GetOrder(string userId)
+        public async Task<ServiceResult<OrderDto?>> GetOrder(string userId)
         {
             var order = await _context.OrdersTable
                 .Include(o => o.Items)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(o => o.UserId == userId);
-            if(order == null) return null;
+            if(order == null) return ServiceResult<OrderDto?>.Fail(ErrorType.NotFound, "Order not found");
 
-            return OrderToDto(order);
+            return ServiceResult<OrderDto?>.Ok(OrderToDto(order));
         }
-        public async Task<bool> CancelOrder(int orderId, string userId)
+        public async Task<ServiceResult<bool>> CancelOrder(int orderId, string userId)
         {
             var order = await _context.OrdersTable
                                 .Include(o => o.Items)
                                 .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId);
-            if (order == null) return false;
-            if(order.Status == OrderStatus.Cancelled ||  order.Status == OrderStatus.Delivered) return false;
+            if (order == null) return ServiceResult<bool>.Fail(ErrorType.NotFound, "Order not found");
+            if(order.Status == OrderStatus.Cancelled ||  order.Status == OrderStatus.Delivered) return ServiceResult<bool>.Fail(ErrorType.BadRequest, "Order already cancelled or delivered");
 
             var productIds = order.Items.Select(i => i.ProductId).ToList();
             var products = await _context.ProductsTable
@@ -52,26 +52,26 @@ namespace Ecommerce.Services
 
             order.Status = OrderStatus.Cancelled;
             await _context.SaveChangesAsync();
-            return true;
+            return ServiceResult<bool>.Ok(true);
         }
-        public async Task<OrderDto?> CreateOrder(PlaceOrderDto request, string userId)
+        public async Task<ServiceResult<OrderDto?>> CreateOrder(PlaceOrderDto request, string userId)
         {
             if (string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.Phone) ||
                 string.IsNullOrWhiteSpace(request.DeliveryAddress))
-                return null;
+                return ServiceResult<OrderDto?>.Fail(ErrorType.BadRequest, "Please provide all required details");
 
             var cartItems = await _context.CartItemsTable.Where(c => c.UserId == userId)
                                 .Include(c => c.Product)
                                 .ToListAsync();
 
             if (cartItems.Count == 0)
-                return null;
+                return ServiceResult<OrderDto?>.Fail(ErrorType.NotFound, "Cart is empty");
 
             foreach (var ci in cartItems)
             {
                 if (ci.Quantity > ci.Product.Stock)
-                    return null;
+                    return ServiceResult<OrderDto?>.Fail(ErrorType.BadRequest, "Insufficient stock for some items");
             }
 
             var order = new Order
@@ -94,17 +94,17 @@ namespace Ecommerce.Services
 
             await _context.SaveChangesAsync();
 
-            return OrderToDto(order);
+            return ServiceResult<OrderDto?>.Ok(OrderToDto(order));
         }
-        public async Task<OrderDto?> UpdateOrder(Order order, string userId)
+        public async Task<ServiceResult<OrderDto?>> UpdateOrder(Order order, string userId)
         {
             var Findorder = await _context.OrdersTable
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.Id == order.Id && o.UserId == userId);
-            if(Findorder == null) return null;
+            if(Findorder == null) return ServiceResult<OrderDto?>.Fail(ErrorType.NotFound, "Order not found");
             Findorder.Status = order.Status;
             await _context.SaveChangesAsync();
-            return OrderToDto(Findorder);
+            return ServiceResult<OrderDto?>.Ok(OrderToDto(Findorder));
         }
         public OrderItem CartToOrder(CartItem cartItem)
         {

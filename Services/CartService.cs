@@ -13,7 +13,7 @@ namespace Ecommerce.Services
         {
             _context = context;
         }
-        public async Task<List<CartItemDto>> GetCartItems()
+        public async Task<ServiceResult<List<CartItemDto>>> GetCartItems()
         {
             var cartItems = await _context.CartItemsTable.Include(c => c.Product).ToListAsync();
             var Items = cartItems.Select(ci => new CartItemDto
@@ -27,29 +27,28 @@ namespace Ecommerce.Services
                 ImageUrl = ci.Product.ImageUrl
 
             }).ToList();
-            return Items;
+            return ServiceResult<List<CartItemDto>>.Ok(Items);
 
         }
 
-        public async Task<CartItemDto?> GetCartItem(string userId)
+        public async Task<ServiceResult<CartItemDto?>> GetCartItem(string userId)
         {
             var cartItem = await _context.CartItemsTable.Include(c => c.Product).FirstOrDefaultAsync(c => c.UserId == userId);
             if (cartItem == null)
             {
-                return null;
+                return ServiceResult<CartItemDto?>.Fail(ErrorType.NotFound, "Cart item not found");
             }
-
-            return _mapToDto(cartItem);
+            return ServiceResult<CartItemDto?>.Ok(_mapToDto(cartItem));
         }
 
-        public async Task<CartItemDto?> AddToCart(int productId, int newQuantity, string userId)
+        public async Task<ServiceResult<CartItemDto?>> AddToCart(int productId, int newQuantity, string userId)
         {
             if (newQuantity < 1)
-                return null;
+                return ServiceResult<CartItemDto?>.Fail(ErrorType.NotFound, "Invalid quantity");
 
             var product = await _context.ProductsTable.FirstOrDefaultAsync(p => p.Id == productId);
             if (product == null || newQuantity > product.Stock)
-                return null;
+                return ServiceResult<CartItemDto?>.Fail(ErrorType.NotFound, "Invalid product or quantity");
 
             var cartItem = await _context.CartItemsTable.FirstOrDefaultAsync(c => c.ProductId == productId && c.UserId == userId);
 
@@ -70,45 +69,45 @@ namespace Ecommerce.Services
             }
 
             await _context.SaveChangesAsync(); 
-            return _mapToDto(cartItem);
+            return ServiceResult<CartItemDto?>.Ok(_mapToDto(cartItem));
         }
-        public async Task<CartItemDto?> UpdateCartItem(int productId, int newQuantity, string userId)
+        public async Task<ServiceResult<CartItemDto?>> UpdateCartItem(int productId, int newQuantity, string userId)
         {
             var cartItem = await _context.CartItemsTable.Include(c => c.Product).FirstOrDefaultAsync(c => c.ProductId == productId && c.UserId == userId);
             if (cartItem == null)
             {
-                return null;
+                return ServiceResult<CartItemDto?>.Fail(ErrorType.NotFound, "Cart item not found");
             }
 
             if(newQuantity <= 0)
             {
                 _context.CartItemsTable.Remove(cartItem);
                 await _context.SaveChangesAsync();
-                return null;
+                return ServiceResult<CartItemDto?>.NoContent();
             }
 
             cartItem.Quantity = newQuantity;
             await _context.SaveChangesAsync();
-            return _mapToDto(cartItem!);
+            return ServiceResult<CartItemDto?>.Ok(_mapToDto(cartItem!));
         }
-        public async Task<bool> RemoveFromCart(int productId, string userId)
+        public async Task<ServiceResult<bool>> RemoveFromCart(int productId, string userId)
         {
             var cartItem = await _context.CartItemsTable.FirstOrDefaultAsync(c => c.ProductId == productId && c.UserId == userId);
             if (cartItem == null)
             {
-                return false;
+                return ServiceResult<bool>.Fail(ErrorType.NotFound, "Cart item not found");
             }
 
             _context.CartItemsTable.Remove(cartItem);
             await _context.SaveChangesAsync();
-            return true;
+            return ServiceResult<bool>.Ok(true);
         }
-        public async Task<bool> ClearCart(string userId)
+        public async Task<ServiceResult<bool>> ClearCart(string userId)
 
         {
             await _context.CartItemsTable.Where(c => c.UserId == userId).ExecuteDeleteAsync();
             await _context.SaveChangesAsync();
-            return true;
+            return ServiceResult<bool>.Ok(true);
         }
 
         public CartItemDto _mapToDto(CartItem cartItem)

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Ecommerce.Controllers
 {
     [Route("api/[controller]"), ApiController, Authorize]
-    public class ProductsController : ControllerBase
+    public class ProductsController : EcommerceController
     {
         public readonly IProduct _productService;
         public ProductsController(IProduct productService)
@@ -15,31 +15,36 @@ namespace Ecommerce.Controllers
             _productService = productService;
         }
 
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string? query)
+        {
+            query = query?.Trim() ?? string.Empty;
+            return ToActionResult(await _productService.SearchProducts(query));
+        }
+
         [HttpGet("get"), AllowAnonymous]
         public async Task<ActionResult<List<Product>>> GetProducts(int fetched)
         {
             var products = await _productService.GetProducts(fetched);
-            return Ok(products);
+            return ToActionResult(products);
         }
         [HttpPost("add")]
         public async Task<ActionResult<Product>> AddProducts(Product product)
         {
             var newProduct = await _productService.AddProducts(product);
-            return Ok(newProduct);
+            return ToActionResult(newProduct);
         }
         [HttpPut("update")]
         public async Task<ActionResult<Product?>> UpdateProduct(Product product)
         {
             var updatedProduct = await _productService.UpdateProduct(product);
-            if (updatedProduct == null) return NotFound("Product not found");
-            return Ok(updatedProduct);
+            return ToActionResult(updatedProduct);
         }
         [HttpDelete("remove")]
         public async Task<ActionResult<Product?>> RemoveProduct(int productId)
         {
             var removedProduct = await _productService.RemoveProduct(productId);
-            if (removedProduct == null) return NotFound("Product not found");
-            return Ok(removedProduct);
+            return ToActionResult(removedProduct);
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Ecommerce.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ApiControllerBase
+    public class AuthController : EcommerceController
     {
         private readonly UserManager<User> _userManager;
         private readonly IConfiguration _configuration;
@@ -34,20 +34,20 @@ namespace Ecommerce.Controllers
         }
 
         [HttpPost("user/signup")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto payload)
+        public async Task<ActionResult> Register([FromBody] RegisterDto payload)
         {
             return ToActionResult(await _authService.SignUp(payload));
         }
 
         [HttpPost("user/login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto payload)
+        public async Task<ActionResult> Login([FromBody] LoginDto payload)
         {
             if (!ModelState.IsValid) return BadRequest("provide all required details");
             return ToActionResult(await _authService.Login(payload));
         }
 
         [HttpPost("user/refresh-token")]
-        public async Task<IActionResult> TokenRefresh([FromBody] TokenRequestDto payload)
+        public async Task<ActionResult> TokenRefresh([FromBody] TokenRequestDto payload)
         {
             if (!ModelState.IsValid) return BadRequest("provide all required details");
 
@@ -57,9 +57,7 @@ namespace Ecommerce.Controllers
         [HttpPost("logout/{refreshToken}"), Authorize]
         public async Task<IActionResult> Logout(string refreshToken)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId is null) return Unauthorized();
-
+            var userId = UserId;
             await _authService.Logout(userId, refreshToken);
             return NoContent();
         }

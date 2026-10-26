@@ -4,9 +4,10 @@ namespace Ecommerce.Interface
 {
     public interface IProduct
     {
-        public Task<List<Product>> GetProducts(int fetched);
-        public Task<Product> AddProducts(Product product);
-        public Task<Product?> UpdateProduct(Product product);
-        public Task<Product?> RemoveProduct(int productId);
+        Task<ServiceResult<List<Product>>> SearchProducts(string query);
+        public Task<ServiceResult<List<Product>>> GetProducts(int fetched);
+        public Task<ServiceResult<Product>> AddProducts(Product product);
+        public Task<ServiceResult<Product?>> UpdateProduct(Product product);
+        public Task<ServiceResult<Product?>> RemoveProduct(int productId);
     }
 }
