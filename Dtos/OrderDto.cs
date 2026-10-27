@@ -12,5 +12,7 @@ namespace Ecommerce.Dtos
         public decimal Total { get; set; }
         public int Quantity { get; set; }
         public List<OrderItemDto> Items { get; set; } = new();
+        public string? PaymentReference { get; set; }
+        public string? AuthorizationUrl { get; set; }
     }
 }

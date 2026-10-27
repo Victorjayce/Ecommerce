@@ -10,9 +10,11 @@ namespace Ecommerce.Services
     public class OrderService: IOrder
     {
         private readonly DataContext _context;
-        public OrderService(DataContext context)
+        private readonly IPayment _payment;
+        public OrderService(DataContext context, IPayment payment)
         {
             _context = context;
+            _payment = payment;
         }
         public async Task<ServiceResult<List<OrderDto>>> GetOrders()
         {
@@ -51,6 +53,22 @@ namespace Ecommerce.Services
                 products[item.ProductId].Stock += item.Quantity;
 
             order.Status = OrderStatus.Cancelled;
+
+            if (order.PaymentStatus == PaymentStatus.Successful)
+                return ServiceResult<bool>.Fail(ErrorType.BadRequest, "Cannot cancel order with successful payment.");
+
+            var attempt = await _context.PaymentsTable
+                .Where(p =>
+                    p.OrderId == orderId &&
+                    p.UserId == userId &&
+                    p.Status == PaymentStatus.Pending)
+                .FirstOrDefaultAsync();
+
+            if (attempt == null)
+                return ServiceResult<bool>.Fail(ErrorType.NotFound, "Payment attempt not found.");
+
+            attempt.Status = PaymentStatus.Cancelled;
+
             await _context.SaveChangesAsync();
             return ServiceResult<bool>.Ok(true);
         }
@@ -94,19 +112,18 @@ namespace Ecommerce.Services
 
             await _context.SaveChangesAsync();
 
-            return ServiceResult<OrderDto?>.Ok(OrderToDto(order));
+            var result = OrderToDto(order);
+
+            var payment = await _payment.Initialize(order.Id, userId);
+            if (payment.Success)
+            {
+                result.PaymentReference = payment.Data?.Reference;
+                result.AuthorizationUrl = payment.Data?.AuthorizationUrl;
+            }
+
+            return ServiceResult<OrderDto?>.Ok(result);
         }
-        public async Task<ServiceResult<OrderDto?>> UpdateOrder(Order order, string userId)
-        {
-            var Findorder = await _context.OrdersTable
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.Id == order.Id && o.UserId == userId);
-            if(Findorder == null) return ServiceResult<OrderDto?>.Fail(ErrorType.NotFound, "Order not found");
-            Findorder.Status = order.Status;
-            await _context.SaveChangesAsync();
-            return ServiceResult<OrderDto?>.Ok(OrderToDto(Findorder));
-        }
-        public OrderItem CartToOrder(CartItem cartItem)
+        private OrderItem CartToOrder(CartItem cartItem)
         {
             return new OrderItem
             {
@@ -116,7 +133,7 @@ namespace Ecommerce.Services
                 Quantity = cartItem.Quantity
             };
         }
-        public OrderDto OrderToDto(Order order)
+        private OrderDto OrderToDto(Order order)
         {
             var orderdto = new OrderDto
             {

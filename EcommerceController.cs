@@ -15,6 +15,18 @@ namespace Ecommerce
 
             if (result.Success) return NoContent();
 
+            if(!result.Success && result.Data != null)
+            {
+                return result.ErrorType switch
+                {
+                    ErrorType.NotFound => NotFound(new { error = result.Data }),
+                    ErrorType.Forbidden => StatusCode(StatusCodes.Status403Forbidden, new { error = result.Data }),
+                    ErrorType.Conflict => Conflict(new { error = result.Data }),
+                    ErrorType.BadRequest => BadRequest(new { error = result.Data }),
+                    _ => BadRequest(new { error = result.Data })
+                };
+            }
+
             return result.ErrorType switch
             {
                 ErrorType.NotFound => NotFound(new { error = result.Error }),

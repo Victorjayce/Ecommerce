@@ -12,5 +12,7 @@ namespace Ecommerce.Interface
 
         Task<ServiceResult<bool>> Cancel(
             int orderId, string userId);
+
+        Task HandleChargeSuccess(PaystackTransaction data);
     }
 }

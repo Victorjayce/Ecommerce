@@ -14,6 +14,6 @@ public class ServiceResult<T>
     public static ServiceResult<T> Fail(ErrorType type, string error) =>
         new() { Success = false, ErrorType = type, Error = error };
 
-    public static ServiceResult<T> Errored(ErrorType type, T data, string error) =>
-        new() { Success = false, ErrorType = type, Error = error, Data = data };
+    public static ServiceResult<T> Errored(ErrorType type, T data) =>
+        new() { Success = false, ErrorType = type, Data = data };
 }
