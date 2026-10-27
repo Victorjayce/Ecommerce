@@ -20,7 +20,7 @@ namespace Ecommerce.Controllers
         [HttpGet("get-all"), Authorize(Roles = UserRoles.Admin)]
         public async Task<ActionResult<List<CartItemDto>>> GetCartItems()
         {
-            var cartItems = await _cartService.GetCartItems();
+            var cartItems = await _cartService.GetAllCartItems();
             return ToActionResult(cartItems);
         }
 
@@ -28,7 +28,7 @@ namespace Ecommerce.Controllers
         public async Task<ActionResult<List<CartItemDto>>> GetCartItem()
         {
             var userId = UserId;
-            var cartItem = await _cartService.GetCartItem(userId);
+            var cartItem = await _cartService.GetCartItems(userId);
             return ToActionResult(cartItem);
         }
 

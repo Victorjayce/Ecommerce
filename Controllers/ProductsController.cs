@@ -15,7 +15,7 @@ namespace Ecommerce.Controllers
             _productService = productService;
         }
 
-        [HttpGet("search")]
+        [HttpGet("search"), AllowAnonymous]
         public async Task<ActionResult> Search([FromQuery] string? query)
         {
             query = query?.Trim() ?? string.Empty;

@@ -13,7 +13,7 @@ namespace Ecommerce.Services
         {
             _context = context;
         }
-        public async Task<ServiceResult<List<CartItemDto>>> GetCartItems()
+        public async Task<ServiceResult<List<CartItemDto>>> GetAllCartItems()
         {
             var cartItems = await _context.CartItemsTable.Include(c => c.Product).ToListAsync();
             var Items = cartItems.Select(ci => new CartItemDto
@@ -31,14 +31,15 @@ namespace Ecommerce.Services
 
         }
 
-        public async Task<ServiceResult<CartItemDto?>> GetCartItem(string userId)
+        public async Task<ServiceResult<List<CartItemDto?>>> GetCartItems(string userId)
         {
-            var cartItem = await _context.CartItemsTable.Include(c => c.Product).FirstOrDefaultAsync(c => c.UserId == userId);
-            if (cartItem == null)
+            var cartItems = await _context.CartItemsTable.Include(c => c.Product).Where(c => c.UserId == userId).ToListAsync();
+            if (cartItems == null) 
             {
-                return ServiceResult<CartItemDto?>.Fail(ErrorType.NotFound, "Cart item not found");
+                return ServiceResult<List<CartItemDto?>>.Fail(ErrorType.NotFound, "No cart items found for the user"); 
             }
-            return ServiceResult<CartItemDto?>.Ok(_mapToDto(cartItem));
+            var items = cartItems.Select(ci => _mapToDto(ci)).ToList();
+            return ServiceResult<List<CartItemDto?>>.Ok(items!);
         }
 
         public async Task<ServiceResult<CartItemDto?>> AddToCart(int productId, int newQuantity, string userId)
