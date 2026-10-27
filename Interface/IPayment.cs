@@ -13,6 +13,6 @@ namespace Ecommerce.Interface
         Task<ServiceResult<bool>> Cancel(
             int orderId, string userId);
 
-        Task HandleChargeSuccess(PaystackTransaction data);
+        Task<bool> HandleWebhook(byte[] body, string? signature);
     }
 }

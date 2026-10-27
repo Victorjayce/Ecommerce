@@ -1,10 +1,13 @@
-﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using Ecommerce.Data;
+﻿using Ecommerce.Data;
 using Ecommerce.Dtos;
 using Ecommerce.Interface;
 using Ecommerce.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace Ecommerce.Services
 {
@@ -239,17 +242,29 @@ namespace Ecommerce.Services
             });
         }
 
-        // Called by the webhook controller
-        public async Task HandleChargeSuccess(PaystackTransaction data)
+        public async Task<bool> HandleWebhook(byte[] body, string? signature)
         {
-            if (data.Reference == null) return;
+            var secret = _config["Paystack:SecretKey"] ?? "";
+            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(secret));
+            var computed = Convert.ToHexString(hmac.ComputeHash(body)).ToLowerInvariant();
 
-            var attempt = await _context.PaymentsTable
-                .FirstOrDefaultAsync(p => p.Reference == data.Reference);
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(computed),
+                    Encoding.UTF8.GetBytes((signature ?? "").ToLowerInvariant())))
+                return false; // not from Paystack
 
-            if (attempt == null) return;
+            var evt = JsonSerializer.Deserialize<PaystackWebhookEvent>(body);
 
-            await ApplySuccessfulPayment(attempt, data);
+            if (evt?.Event == "charge.success" && evt.Data?.Reference != null)
+            {
+                var attempt = await _context.PaymentsTable
+                    .FirstOrDefaultAsync(p => p.Reference == evt.Data.Reference);
+
+                if (attempt != null)
+                    await ApplySuccessfulPayment(attempt, evt.Data);
+            }
+
+            return true;
         }
 
         public async Task<ServiceResult<bool>> Cancel(int orderId, string userId)

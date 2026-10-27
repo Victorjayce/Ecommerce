@@ -15,28 +15,34 @@ namespace Ecommerce.Controllers
         {
             _orderService = orderService;
         }
-        [HttpGet("get"), Authorize(Roles = UserRoles.Admin)]
-        public async Task<IActionResult> GetOrders()
+        [HttpGet("get-all"), Authorize(Roles = UserRoles.Admin)]
+        public async Task<ActionResult> GetOrders()
         {
             var orders = await _orderService.GetOrders();
             return ToActionResult(orders);
         }
         [HttpGet("get/{orderId}")]
-        public async Task<IActionResult> GetOrderById(int orderId)
+        public async Task<ActionResult> GetOrderById(int orderId)
         {
             var userId = UserId;
             var order = await _orderService.GetOrder(userId);
             return ToActionResult(order);
         }
+        [HttpGet("get-all/{userId}")]
+        public async Task<ActionResult> GetUserOrders(string userId)
+        {
+            var orders = await _orderService.GetUserOrders(userId);
+            return ToActionResult(orders);
+        }
         [HttpDelete("cancel/{orderId}")]
-        public async Task<IActionResult> CancelOrder(int orderId)
+        public async Task<ActionResult> CancelOrder(int orderId)
         {
             var userId = UserId;
             var result = await _orderService.CancelOrder(orderId, userId);
             return ToActionResult(result);
         }
         [HttpPost("create")]
-        public async Task<IActionResult> CreateOrder([FromBody] PlaceOrderDto placeOrderDto)
+        public async Task<ActionResult> CreateOrder([FromBody] PlaceOrderDto placeOrderDto)
         {
             var userId = UserId;
             var order = await _orderService.CreateOrder(placeOrderDto, userId);

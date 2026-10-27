@@ -16,7 +16,7 @@ namespace Ecommerce.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> Search([FromQuery] string? query)
+        public async Task<ActionResult> Search([FromQuery] string? query)
         {
             query = query?.Trim() ?? string.Empty;
             return ToActionResult(await _productService.SearchProducts(query));
