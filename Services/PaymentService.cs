@@ -232,7 +232,6 @@ namespace Ecommerce.Services
                 });
             }
 
-            //the customer hasn't finished paying
             return ServiceResult<PaymentResultDto?>.Ok(new PaymentResultDto
             {
                 Success = false,
