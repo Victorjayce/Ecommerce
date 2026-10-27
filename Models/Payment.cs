@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using static System.Collections.Specialized.BitVector32;
 
@@ -15,6 +16,7 @@ namespace Ecommerce.Models
         public string UserId { get; set; } = null!;
         public User User { get; set; } = null!;
 
+        [Required, MaxLength(100)]
         public string Reference { get; set; } = null!;
 
         public long AmountKobo { get; set; }

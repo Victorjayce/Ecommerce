@@ -73,6 +73,5 @@ namespace Ecommerce.Services
             return ServiceResult<Product?>.Ok(product);
         }
 
-        }
     }
 }

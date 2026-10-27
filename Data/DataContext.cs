@@ -29,13 +29,21 @@ namespace Ecommerce.Data
                 .Property(o => o.Status)
                 .HasConversion<string>();
 
-            modelBuilder.Entity<Payment>()
-                .Property(p => p.Status)
-                .HasConversion<string>();
+            modelBuilder.Entity<Payment>(e =>
+            {
+                e.HasIndex(p => p.Reference).IsUnique();
 
-            modelBuilder.Entity<Payment>()
-                .HasIndex(p => p.Reference)
-                .IsUnique();
+                e.HasOne(p => p.Order)
+                 .WithMany()
+                 .HasForeignKey(p => p.OrderId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(p => p.User)
+                 .WithMany()
+                 .HasForeignKey(p => p.UserId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
 
             modelBuilder.Entity<CartItem>()
                 .HasOne(c => c.Product)
