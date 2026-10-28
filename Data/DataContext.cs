@@ -24,13 +24,22 @@ namespace Ecommerce.Data
             modelBuilder.Entity<CartItem>()
                 .HasIndex(c => c.ProductId)
                 .IsUnique();
-            
-            modelBuilder.Entity<Order>()
-                .Property(o => o.Status)
+
+            modelBuilder.Entity<Order>(e =>
+            {
+                e.Property(o => o.Status)
                 .HasConversion<string>();
+
+                e.Property(o => o.PaymentStatus)
+                .HasConversion<string>();
+            });
+                
 
             modelBuilder.Entity<Payment>(e =>
             {
+                e.Property(o => o.Status)
+                 .HasConversion<string>();
+
                 e.HasIndex(p => p.Reference).IsUnique();
 
                 e.HasOne(p => p.Order)
