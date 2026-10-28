@@ -1,164 +1,101 @@
 # Ecommerce API
 
-An ASP.NET Core Web API for a basic ecommerce application. The project provides product management, a shared shopping cart, and order checkout functionality backed by SQL Server and Entity Framework Core.
+An ASP.NET Core Web API for an ecommerce application. It provides product discovery, JWT authentication, user-scoped carts and orders, and Paystack payment processing.
 
 ## Features
 
-- Product listing with simple pagination
-- Product creation endpoint
-- Add, update, remove, and clear cart items
-- Stock validation during cart additions and checkout
-- Order creation from the current cart
-- Order history and single-order lookup
-- Order cancellation with stock restoration
-- Swagger/OpenAPI documentation in Development
+- Product listing and search, plus authenticated product management
+- User registration, login, JWT access tokens, refresh-token rotation, and logout
+- Per-user cart and order operations
+- Stock validation and stock restoration when eligible unpaid orders are cancelled or expire
+- Paystack payment initialization, verification, cancellation, and signed webhooks
+- Admin-only endpoints for listing all orders and carts
+- Swagger/OpenAPI in the Development environment
 
-## Tech stack
+## Technology
 
-- .NET 8
-- ASP.NET Core Web API
-- Entity Framework Core 8
-- SQL Server
+- .NET 8 / ASP.NET Core
+- Entity Framework Core 8 with SQL Server
+- ASP.NET Core Identity and JWT bearer authentication
+- Paystack REST API
 - Swagger via Swashbuckle
 
 ## Prerequisites
 
 - .NET 8 SDK
-- SQL Server Express or another SQL Server instance
-- Visual Studio, Visual Studio Code, or the .NET CLI
+- SQL Server (LocalDB, SQL Server Express, or another SQL Server instance)
+- Paystack test credentials for payment flows
 
-## Getting started
+## Run locally
 
-1. Clone the repository and open the solution:
+1. Clone the repository and enter its directory:
 
-   ```bash
+   ```powershell
    git clone https://github.com/Victorjayce/Ecommerce.git
    cd Ecommerce
    ```
 
-2. Confirm the SQL Server connection string in `appsettings.json`:
+2. Configure local settings. The API reads:
+   - `ConnectionStrings:DefaultConnection`
+   - `Jwt:Issuer`, `Jwt:Audience`, and `Jwt:Secret` (use a strong secret of at least 32 bytes)
+   - `Paystack:SecretKey` and `Paystack:CallbackUrl`
 
-   ```json
-   "DefaultConnection": "Server=.\\SQLEXPRESS;Database=EcommerceDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+   Use .NET user-secrets or environment variables for local secrets rather than committing credentials. For example:
+
+   ```powershell
+   dotnet user-secrets init
+   dotnet user-secrets set "Jwt:Secret" "<a-long-random-secret>"
+   dotnet user-secrets set "Paystack:SecretKey" "<your-paystack-test-secret>"
+   dotnet user-secrets set "Paystack:CallbackUrl" "https://your-frontend.example/payment/callback"
    ```
 
-   Update the server name, authentication settings, or database name for your local environment as needed.
+   Configure the SQL Server connection string the same way, for example:
 
-3. Apply the Entity Framework migrations:
+   ```powershell
+   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-sql-server-connection-string>"
+   ```
 
-   ```bash
+   Review the checked-in settings before using them. Treat any credential found in the repository as compromised and rotate it; never use repository values as production credentials.
+
+3. Apply the database migrations:
+
+   ```powershell
    dotnet ef database update
    ```
 
-4. Seed the database with test products by opening `seed_products.sql` in SQL Server Management Studio or Azure Data Studio and executing it against `EcommerceDB`:
+   If `dotnet ef` is not installed, install the EF Core CLI tool once with `dotnet tool install --global dotnet-ef`.
 
-   ```sql
-   -- seed_products.sql
-   ```
+4. Optionally run [`seed_products.sql`](seed_products.sql) against the database after migrations. It inserts 250 sample products, including products with zero stock. Running it repeatedly inserts duplicates.
 
-   The script inserts 250 sample products, including some out-of-stock products for testing. Run it after the database has been created and migrations have completed.
+5. Start the API:
 
-5. Run the API:
-
-   ```bash
+   ```powershell
    dotnet run
    ```
 
-   The default launch profiles are:
+   The HTTP launch profile listens at `http://localhost:5156`; the HTTPS profile uses `https://localhost:7136` and `http://localhost:5156`. Swagger is available at `http://localhost:5156/swagger` while running in Development.
 
-   - HTTP: `http://localhost:5156`
-   - HTTPS: `https://localhost:7136`
+On startup, the application ensures the `Admin` and `User` roles exist. Public registration creates users with the `User` role; it does not create an administrator.
 
-6. Open Swagger in a browser:
+## Frontend integration
 
-   ```text
-   http://localhost:5156/swagger
-   ```
+See [`info.md`](info.md) for the frontend integration guide, including routes, request/response shapes, authentication, checkout, and known API limitations.
 
-## API overview
-
-All routes use the `/api` prefix.
-
-### Products
-
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/Products/get?fetched=0` | Returns up to 50 products, skipping the requested offset. |
-| `POST` | `/api/Products/add` | Creates a product. |
-
-### Cart
-
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/Cart/get` | Returns the current cart. |
-| `POST` | `/api/Cart/add` | Adds or sets a product quantity in the cart. |
-| `PUT` | `/api/Cart/update` | Updates a cart quantity; zero or less removes the item. |
-| `DELETE` | `/api/Cart/remove/{productId}` | Removes one product from the cart. |
-| `DELETE` | `/api/Cart/clear` | Removes all cart items. |
-
-Cart request bodies use this format:
-
-```json
-{
-  "productId": 1,
-  "quantity": 2
-}
-```
-
-### Orders
-
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/Order/get` | Returns all orders. |
-| `GET` | `/api/Order/get/{orderId}` | Returns one order. |
-| `POST` | `/api/Order/create` | Creates an order from the current cart. |
-| `DELETE` | `/api/Order/cancel/{orderId}` | Cancels an eligible order and restores stock. |
-
-Order creation uses this request body:
-
-```json
-{
-  "fullName": "Alex Doe",
-  "phone": "+15551234567",
-  "deliveryAddress": "10 Main Street"
-}
-```
-
-Creating an order validates the cart, captures product names and prices as order-item snapshots, calculates the order total, reduces stock, and clears the cart.
-
-## Project structure
+## Repository layout
 
 ```text
-Controllers/   HTTP API controllers
+Controllers/   HTTP endpoints
 Data/          Entity Framework database context
-Dtos/          Request and response models
+Dtos/          API request and response models
 Interface/     Service contracts
 Migrations/    Entity Framework database migrations
 Models/        Database entities
-Services/      Application and data-access logic
+Services/      Authentication, catalog, cart, order, and payment logic
 ```
 
-## Database
+## Deployment notes
 
-The application uses the following main entities:
-
-- `Product`
-- `CartItem`
-- `Order`
-- `OrderItem`
-
-The cart is currently global to the application and is not associated with a user, account, device, or session.
-
-## Client development
-
-For a Flutter client running locally:
-
-- Android Emulator: use `http://10.0.2.2:5156`
-- iOS Simulator: use `http://localhost:5156`
-- Physical device: use the development machine's local network IP
-
-The current development API does not require authentication and does not configure CORS. These should be added before exposing the API publicly.
-
-## License
-
-No license has been specified for this repository.
+- Configure HTTPS, CORS for the intended frontend origins, and secret storage before deployment.
+- Review authorization carefully: several catalog mutation endpoints currently require authentication but are not restricted to administrators.
+- The frontend guide documents known route and data-model limitations; do not assume the API is production-ready based on this feature list.
+- No license file is currently included. Public visibility alone does not grant permission to reuse or redistribute the code.
