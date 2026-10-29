@@ -15,22 +15,15 @@ namespace Ecommerce.Controllers
         {
             _orderService = orderService;
         }
-        [HttpGet("get-all"), Authorize(Roles = UserRoles.Admin)]
+        [HttpGet("get"), Authorize(Roles = UserRoles.Admin)]
         public async Task<ActionResult> GetOrders()
         {
             var orders = await _orderService.GetOrders();
             return ToActionResult(orders);
-        }
-        [HttpGet("get/{orderId}")]
-        public async Task<ActionResult> GetOrderById(int orderId)
+        }[HttpGet("get-all")]
+        public async Task<ActionResult> GetUserOrders()
         {
-            var userId = UserId;
-            var order = await _orderService.GetOrder(userId);
-            return ToActionResult(order);
-        }
-        [HttpGet("get-all/{userId}")]
-        public async Task<ActionResult> GetUserOrders(string userId)
-        {
+		var userId = UserId;
             var orders = await _orderService.GetUserOrders(userId);
             return ToActionResult(orders);
         }

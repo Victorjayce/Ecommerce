@@ -25,16 +25,6 @@ namespace Ecommerce.Services
             
             return ServiceResult<List<OrderDto>>.Ok(orders.Select(OrderToDto).ToList());
         }
-        public async Task<ServiceResult<OrderDto?>> GetOrder(string userId)
-        {
-            var order = await _context.OrdersTable
-                .Include(o => o.Items)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(o => o.UserId == userId);
-            if(order == null) return ServiceResult<OrderDto?>.Fail(ErrorType.NotFound, "Order not found");
-
-            return ServiceResult<OrderDto?>.Ok(OrderToDto(order));
-        }
         public async Task<ServiceResult<List<OrderDto?>>> GetUserOrders(string userId)
         {
             var orders = await _context.OrdersTable
